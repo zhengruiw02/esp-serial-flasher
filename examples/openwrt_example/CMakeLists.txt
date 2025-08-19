@@ -16,11 +16,13 @@ project(esp_flasher)
 
 add_compile_definitions(SERIAL_FLASHER_INTERFACE_UART)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
-create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world Src/binaries_flash.c)
-create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/RAM_APP Src/binaries_ram.c)
+add_definitions(-DSINGLE_TARGET_SUPPORT)
+# include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
+# create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world Src/binaries_flash.c)
+# create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/RAM_APP Src/binaries_ram.c)
 
-add_executable(${CMAKE_PROJECT_NAME} ../common/example_common.c Src/main.c Src/binaries_flash.c Src/binaries_ram.c)
+# add_executable(${CMAKE_PROJECT_NAME} ../common/example_common.c Src/main.c Src/binaries_flash.c Src/binaries_ram.c)
+add_executable(${CMAKE_PROJECT_NAME} ../common/example_common.c Src/main.c Src/read_bin.c)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common)
 
 add_subdirectory(${FLASHER_DIR} ${CMAKE_BINARY_DIR}/flasher)
