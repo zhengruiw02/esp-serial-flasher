@@ -1,9 +1,14 @@
 #include <stdio.h>      // printf
+#include <stdint.h>     // uint8_t
 #include <stdlib.h>     // free
 #include <stddef.h>     // size_t
 #include <errno.h>      // error code
 #include <sys/stat.h>   // fstat
 #include <string.h>     // strerror
+#include <time.h>       // gettime
+
+#include "esp_loader.h"
+#include "example_common.h"
 
 /**
  * Read file content into dynamic memory
@@ -99,4 +104,43 @@ void free_file_buffer(char *buffer) {
         free(buffer);
         printf("Memory freed successfully\n");
     }
+}
+
+int read_bin_and_flash(const char *filename, size_t flash_address)
+{
+    char *buffer = NULL;
+    size_t file_size = 0;
+    struct timespec start_time, end_time;
+    // Record start time
+    if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+        perror("clock_gettime start");
+        return -1;
+    }
+    printf("Flash adress: 0x%zx \n", flash_address);
+    
+    buffer = read_file_to_buffer(filename, &file_size);
+    if(buffer == NULL){
+        return -1;
+    }
+
+    // successfully read buffer from file
+
+    // print_file_content(buffer, file_size);
+    flash_binary(buffer, file_size, flash_address);
+
+    free_file_buffer(buffer);
+
+    // Record end time
+    if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+        perror("clock_gettime end");
+        return -1;
+    }
+
+    // Calculate elapsed time
+    double elapsed_time = (end_time.tv_sec - start_time.tv_sec) * 1000000000.0 +
+                         (end_time.tv_nsec - start_time.tv_nsec);
+    // Convert to different units for better readability
+    printf("Print time: %.3f seconds\n", elapsed_time / 1000000000.0);
+
+    return 0;
 }

@@ -16,10 +16,8 @@
 #include <libgen.h>     // included for `basename`
 #include <stdlib.h>     // included for `EXIT_SUCCESS|EXIT_FAILURE`
 
-#include <time.h>       // gettime
 #include <sys/param.h>
 #include "linux_port.h"
-#include "esp_loader.h"
 #include "example_common.h"
 #include "read_bin.h"
 
@@ -104,7 +102,7 @@ static void print_help(const char *progname) {
     printf("  -h, --help              display this help\n");
     printf("  -V, --version           display version information\n");
     // ----------
-    printf("  -r, --baudrate=VALUE    use VALUE as the UART baudrate\n");
+    printf("  -B, --baudrate=VALUE    use VALUE as the UART baudrate\n");
     printf("  -R, --reboot            reboot target\n");
     printf("  -b, --bootloader=PATH   use PATH as the path of bin\n");
     printf("  -p, --partition=PATH    use PATH as the path of bin\n");
@@ -143,7 +141,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRr:b:p:a:", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRB:b:p:a:o:", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -159,7 +157,7 @@ static void args_handler(int argc, char *argv[])
                 reboot_target();
                 exit(EXIT_SUCCESS);
                 break;
-            case 'r':
+            case 'B':
                 _higher_baud_rate = atoi(optarg);
                 break;
             case 'b':
@@ -200,52 +198,6 @@ static void args_handler(int argc, char *argv[])
     print_args();
 }
 
-int read_bin_and_flash(const char *filename, size_t flash_address)
-{
-    char *buffer = NULL;
-    size_t file_size = 0;
-    struct timespec start_time, end_time;
-    // Record start time
-    if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-        perror("clock_gettime start");
-        return -1;
-    }
-    printf("Flash adress: 0x%zx \n", flash_address);
-    
-    buffer = read_file_to_buffer(filename, &file_size);
-    if(buffer == NULL){
-        return -1;
-    }
-
-    // successfully read buffer from file
-
-    // print_file_content(buffer, file_size);
-    flash_binary(buffer, file_size, flash_address);
-
-    free_file_buffer(buffer);
-
-    // Record end time
-    if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-        perror("clock_gettime end");
-        return -1;
-    }
-
-    // Calculate elapsed time
-    double elapsed_time = (end_time.tv_sec - start_time.tv_sec) * 1000000000.0 +
-                         (end_time.tv_nsec - start_time.tv_nsec);
-    // Convert to different units for better readability
-    // if (elapsed_time < 1000.0) {
-    //     printf("Print time: %.0f nanoseconds\n", elapsed_time);
-    // } else if (elapsed_time < 1000000.0) {
-    //     printf("Print time: %.4f microseconds\n", elapsed_time / 1000.0);
-    // } else if (elapsed_time < 1000000000.0) {
-    //     printf("Print time: %.4f milliseconds\n", elapsed_time / 1000000.0);
-    // } else {
-        printf("Print time: %.6f seconds\n", elapsed_time / 1000000000.0);
-    // }
-    return 0;
-}
-
 int main(int argc, char *argv[])
 {
 
@@ -260,7 +212,7 @@ int main(int argc, char *argv[])
     // Init GPIO and serial port to target
     loader_port_linux_init(&config);    
 
-    if (connect_to_target(HIGHER_BAUD_RATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(_higher_baud_rate) == ESP_LOADER_SUCCESS) {
         target_chip_t target_chip;
         size_t flash_address;
         target_chip = esp_loader_get_target();        
@@ -268,7 +220,8 @@ int main(int argc, char *argv[])
 
         if(_have_boot){
             printf("Loading bootloader...\n");
-            read_bin_and_flash(_p_path_boot, BOOTLOADER_ADDRESS_V1);
+            get_target_bootloader_address(target_chip, &flash_address);
+            read_bin_and_flash(_p_path_boot, flash_address);
         }
         if(_have_part){
             printf("Loading partition table...\n");
@@ -304,6 +257,7 @@ int main(int argc, char *argv[])
             if (byte == 1) {
                 printf("%c", ch);
             }
+            usleep(100);
         }
     }
 
