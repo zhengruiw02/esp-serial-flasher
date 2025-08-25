@@ -39,7 +39,7 @@ char* read_file_to_buffer(const char *filename, size_t *file_size) {
     // Handle empty file
     if (*file_size == 0) {
         fclose(file);
-        return malloc(1); // Return minimal buffer
+        return NULL;
     }
 
     // Allocate memory

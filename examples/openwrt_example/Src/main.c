@@ -15,6 +15,8 @@
 #include <getopt.h>     // included for `getopt_long`
 #include <libgen.h>     // included for `basename`
 #include <stdlib.h>     // included for `EXIT_SUCCESS|EXIT_FAILURE`
+
+#include <time.h>       // gettime
 #include <sys/param.h>
 #include "linux_port.h"
 #include "esp_loader.h"
@@ -33,6 +35,13 @@
 #define SERIAL_DEVICE     "/dev/ttyS1"
 
 #define VERSION "1.0"
+
+const loader_linux_config_t config = {
+    .device = SERIAL_DEVICE,
+    .baudrate = DEFAULT_BAUD_RATE,
+    .reset_trigger_pin = TARGET_RST_Pin,
+    .gpio0_trigger_pin = TARGET_IO0_Pin,
+};
 
 static uint32_t _higher_baud_rate = HIGHER_BAUD_RATE;
 static int _have_boot = 0, _have_part = 0, _have_app = 0, _have_ota = 0;
@@ -80,6 +89,7 @@ static const struct option longopts[] = {
     {"version", no_argument, NULL, 'V'},
     // ----------
     {"baudrate", required_argument, NULL, 'r'},
+    {"reboot", no_argument, NULL, 'R'},
     {"bootloader", required_argument, NULL, 'b'},
     {"partition", required_argument, NULL, 'p'},
     {"application", required_argument, NULL, 'a'},
@@ -95,6 +105,7 @@ static void print_help(const char *progname) {
     printf("  -V, --version           display version information\n");
     // ----------
     printf("  -r, --baudrate=VALUE    use VALUE as the UART baudrate\n");
+    printf("  -R, --reboot            reboot target\n");
     printf("  -b, --bootloader=PATH   use PATH as the path of bin\n");
     printf("  -p, --partition=PATH    use PATH as the path of bin\n");
     printf("  -a, --application=PATH  use PATH as the path of bin\n");
@@ -118,13 +129,21 @@ static void print_version() {
     printf("%s\n", VERSION);
 }
 
+static void reboot_target(void)
+{
+    printf("Reboot target...\n");
+    loader_port_linux_init(&config);                
+    esp_loader_reset_target();
+    loader_port_deinit();
+}
+
 static void args_handler(int argc, char *argv[])
 {
     int optc;
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVr:b:p:a:", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRr:b:p:a:", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -134,6 +153,10 @@ static void args_handler(int argc, char *argv[])
                 break;
             case 'V':
                 print_version();
+                exit(EXIT_SUCCESS);
+                break;
+            case 'R':
+                reboot_target();
                 exit(EXIT_SUCCESS);
                 break;
             case 'r':
@@ -181,28 +204,50 @@ int read_bin_and_flash(const char *filename, size_t flash_address)
 {
     char *buffer = NULL;
     size_t file_size = 0;
+    struct timespec start_time, end_time;
+    // Record start time
+    if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+        perror("clock_gettime start");
+        return -1;
+    }
     printf("Flash adress: 0x%zx \n", flash_address);
     
     buffer = read_file_to_buffer(filename, &file_size);
-    if(buffer != 0){
-        // successfully read buffer from file
-        print_file_content(buffer, file_size);
-        flash_binary(buffer, file_size, flash_address);
-        free_file_buffer(buffer);
-        return 0;
-    }else{
+    if(buffer == NULL){
         return -1;
     }
+
+    // successfully read buffer from file
+
+    // print_file_content(buffer, file_size);
+    flash_binary(buffer, file_size, flash_address);
+
+    free_file_buffer(buffer);
+
+    // Record end time
+    if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+        perror("clock_gettime end");
+        return -1;
+    }
+
+    // Calculate elapsed time
+    double elapsed_time = (end_time.tv_sec - start_time.tv_sec) * 1000000000.0 +
+                         (end_time.tv_nsec - start_time.tv_nsec);
+    // Convert to different units for better readability
+    // if (elapsed_time < 1000.0) {
+    //     printf("Print time: %.0f nanoseconds\n", elapsed_time);
+    // } else if (elapsed_time < 1000000.0) {
+    //     printf("Print time: %.4f microseconds\n", elapsed_time / 1000.0);
+    // } else if (elapsed_time < 1000000000.0) {
+    //     printf("Print time: %.4f milliseconds\n", elapsed_time / 1000000.0);
+    // } else {
+        printf("Print time: %.6f seconds\n", elapsed_time / 1000000000.0);
+    // }
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    const loader_linux_config_t config = {
-        .device = SERIAL_DEVICE,
-        .baudrate = DEFAULT_BAUD_RATE,
-        .reset_trigger_pin = TARGET_RST_Pin,
-        .gpio0_trigger_pin = TARGET_IO0_Pin,
-    };
 
     args_handler(argc, argv);
 
