@@ -124,7 +124,7 @@ static void print_args(void)
 }
 
 static void print_version() {
-    printf("%s\n", VERSION);
+    printf("Version %s. Compile time: %s %s\n", VERSION, __DATE__, __TIME__);
 }
 
 static void reboot_target(void)
