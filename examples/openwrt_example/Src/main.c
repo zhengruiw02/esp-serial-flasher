@@ -120,7 +120,7 @@ static void print_args(void)
     if(_have_app){
         printf(" application = %s\n", _p_path_app);}
     if(_have_ota){
-        printf(" application = %s\n", _p_path_ota);}
+        printf(" ota = %s\n", _p_path_ota);}
 }
 
 static void print_version() {
@@ -185,17 +185,37 @@ static void args_handler(int argc, char *argv[])
                 break;
         }
 
-    if (lose || optind < argc) {
+    print_args();
+
+    // try to use extra args to parse for flasher address and binary file
+    int extra_opts_cnt = argc - optind;
+    printf("extra_opts_cnt = %d\n",extra_opts_cnt);
+    if (lose || extra_opts_cnt % 2) {
         /* Print error message and exit.  */
-        if (optind < argc)
-            fprintf(stderr, "%s: extra operand: %s\n", program_name,
-                    argv[optind]);
+        printf("optind = %d, argc = %d \n", optind, argc);
+        if (optind < argc){
+            for(int i = optind; i < argc; i++){
+                fprintf(stderr, "%s: extra operand: %s\n", program_name,
+                    argv[i]);
+            }
+        }
         fprintf(stderr, "Try `%s --help' for more information.\n",
                 program_name);
         exit(EXIT_FAILURE);
+    }else{
+        // should be normal
+        int bin_cnt = extra_opts_cnt / 2;
+        int bin_index, bin_address;
+        static const char *_p_path_bin = NULL;
+        printf("optind = %d, argc = %d \n", optind, argc);
+        for(int i = optind; i < argc; i=i+2 ){
+            bin_index = (i - optind) / 2;            
+            sscanf(argv[i], "%x", &bin_address);
+            _p_path_bin = argv[i+1];
+            printf("bin_cnt = %d, bin_index = %d, bin_address = 0x%04X, path_bin = %s \n", bin_cnt, bin_index, bin_address, _p_path_bin);
+        }
+        exit(EXIT_SUCCESS);
     }
-
-    print_args();
 }
 
 int main(int argc, char *argv[])
