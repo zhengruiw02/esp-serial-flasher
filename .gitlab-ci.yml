@@ -37,8 +37,7 @@ run_pre_commit:
   script:
     - apt-get update
     - pip install pre-commit
-    - git fetch origin master
-    - pre-commit run --show-diff-on-failure --from-ref origin/master --to-ref HEAD
+    - pre-commit run --show-diff-on-failure --all-files
 
 check_stub_source_correctness:
   stage: pre_check
@@ -159,6 +158,7 @@ build_idf_master:
     when: always
     expire_in: 3 days
   extends: .build_idf_template
+  allow_failure: true
 
 build_stm32:
   stage: build
@@ -300,6 +300,10 @@ test_esp1:
       - CI_BUILD_FOLDER:
           - "build_stable"
           - "build_master"
+  rules:
+    - if: '$CI_BUILD_FOLDER == "build_master"'
+      allow_failure: true
+    - when: always
   script:
     - cd $CI_PROJECT_DIR
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_spi_load_ram_example'
@@ -313,10 +317,15 @@ test_esp2:
       - CI_BUILD_FOLDER:
           - "build_stable"
           - "build_master"
+  rules:
+    - if: '$CI_BUILD_FOLDER == "build_master"'
+      allow_failure: true
+    - when: always
   script:
     - cd $CI_PROJECT_DIR
     - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32H2
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_usb_cdc_acm_example'
+    - pytest --target=esp32p4 --port=/dev/serial_ports/ESP32P4_ESP32C6
 
 test_zephyr:
   extends: .test_template

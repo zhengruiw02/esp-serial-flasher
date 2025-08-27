@@ -6,48 +6,50 @@ This example demonstrates how to upload an app to RAM of an Espressif MCU (targe
 
 The following steps are performed in order to re-program the targets memory:
 
-1. SPI2 through which the binary will be transfered is initialized.
+1. SPI2 through which the binary will be transferred is initialized.
 2. The host puts the slave device into the SPI download mode tries to connect by calling `esp_loader_connect()`.
 3. Then `esp_loader_mem_start()` is called for each segment in RAM.
-4. `esp_loader_flash_write()` function is called repeatedly for every segment until the whole binary image is transfered.
+4. `esp_loader_flash_write()` function is called repeatedly for every segment until the whole binary image is transferred.
 5. `esp_loader_mem_finish()` is called with the binary entrypoint, telling the chip to start the uploaded program.
 6. UART2 is initialized for the connection to the target.
 7. Target output is continually read and printed out.
 
 ## Hardware Required
 
-* Two development boards, one with any Espressif MCU (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.) and one with an Espressif MCU with SPI download support. Here is a short list of supported MCUs:
-
-1. ESP32-C3
-2. ESP32-C2
-3. ESP32-S3
-4. ESP32-S2
-5. ESP32-H2
-
-* One or two USB cables for power supply and programming.
+- **Host**: Any Espressif development board (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.)
+- **Target**: Espressif MCU with SPI download support:
+  - ESP32-C3, ESP32-C2, ESP32-C5, ESP32-C6
+  - ESP32-S3, ESP32-S2
+  - ESP32-H2
+- One or two USB cables for power supply and programming.
+- Jumper cables for host-to-target connections.
 
 ## Hardware Connection
 
-Table below shows connection between two Espressif MCUs.
+This example uses the **SPI interface**. For detailed interface information, strapping pin requirements, and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#spi-interface).
 
-| Host (ESP32-S3) | Target        |
-|:---------------:|:-------------:|
-|    IO_5         |    RESET      |
-|    IO_12        |    CLK        |
-|    IO_10        |    CS         |
-|    IO_13        |    MISO       |
-|    IO_11        |    MOSI       |
-|    IO_14        |    QUADWP     |
-|    IO_9         |    QUADHD     |
-|    IO_13        |    STRAP_B0   |
-|    IO_2         |    STRAP_B1   |
-|    IO_3         |    STRAP_B2   |
-|    IO_4         |    STRAP_B3   |
-|    IO_6         |    UART0_RX   |
-|    IO_7         |    UART0_TX   |
+**ESP32-S3-to-Espressif SoC Pin Assignment:**
 
-> **Note 1:** Strapping bit pins are documented in the TRM for each respective chip.
-> **Note 2:** For achieving the highest speeds, check which pins go through the IO MUX bypassing the GPIO matrix and use those. Pins chosen here are IO MUX pins for ESP32-S3 and ESP32-S2 chips.
+| ESP32-S3 (host) | Espressif SoC (target) |
+| :-------------: | :--------------------: |
+|      IO_5       |         RESET          |
+|      IO_12      |          CLK           |
+|      IO_10      |           CS           |
+|      IO_13      |          MISO          |
+|      IO_11      |          MOSI          |
+|      IO_14      |         QUADWP         |
+|      IO_9       |         QUADHD         |
+|      IO_13      |        STRAP_B0        |
+|      IO_2       |        STRAP_B1        |
+|      IO_3       |        STRAP_B2        |
+|      IO_4       |        STRAP_B3        |
+|      IO_6       |        UART0_RX        |
+|      IO_7       |        UART0_TX        |
+
+> [!NOTE]
+>
+> - **Strapping Pins**: Configuration varies by target chip - consult the target's Technical Reference Manual for the specific strapping pin values required
+> - **UART Monitoring**: Optional 2-pin UART connection for real-time target output
 
 ## Build and Flash
 
@@ -57,7 +59,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 

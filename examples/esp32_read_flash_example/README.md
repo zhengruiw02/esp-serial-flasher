@@ -9,11 +9,12 @@ The following steps are performed to demonstrate the flash reading functionality
 1. UART1 through which the the new binary will be transferred is initialized.
 2. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
-4. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transfered.
+4. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transferred.
 5. `esp_loader_flash_read()` is called to read back the data programmed into the target flash
 6. Data is compared to verify successful reading
 
-**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing and reading speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+> [!NOTE]
+> In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing and reading speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Connection Configuration
 
@@ -21,25 +22,22 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 ## Hardware Required
 
-* Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
-
-* One or two USB cables for power supply and programming.
-
-* Cables to connect host to target according to table below.
+- Two development boards with Espressif SoCs (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
+- One or two USB cables for power supply and programming.
+- Jumper cables to connect host to target according to table below.
 
 ## Hardware Connection
 
-Table below shows connection between the two ESP32 devices.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| ESP32 (host) | ESP32 (target) |
-|:------------:|:-------------:|
-|    IO26      |      IO0      |
-|    IO25      |     RESET     |
-|    IO4       |      RX0      |
-|    IO5       |      TX0      |
+**ESP32-to-Espressif SoC Pin Assignment:**
 
-> [!NOTE]
-> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+| ESP32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     IO26     |          BOOT          |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 ## Build and Flash
 
@@ -49,7 +47,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/index.html) for full steps to configure and use ESP-IDF to build projects.
 
