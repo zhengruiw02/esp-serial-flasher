@@ -207,14 +207,21 @@ static void args_handler(int argc, char *argv[])
         int bin_cnt = extra_opts_cnt / 2;
         int bin_index, bin_address;
         static const char *_p_path_bin = NULL;
+        // unsigned int *p_bin_addr_array = malloc(sizeof(int) * bin_cnt);
+        // char **p_bin_path_array = malloc(sizeof(char *) * bin_cnt);
         printf("optind = %d, argc = %d \n", optind, argc);
         for(int i = optind; i < argc; i=i+2 ){
             bin_index = (i - optind) / 2;            
             sscanf(argv[i], "%x", &bin_address);
             _p_path_bin = argv[i+1];
+            // sscanf(argv[i], "%x", p_bin_addr_array[bin_index]);
+            // *p_bin_path_array[bin_index] = argv[i+1];
             printf("bin_cnt = %d, bin_index = %d, bin_address = 0x%04X, path_bin = %s \n", bin_cnt, bin_index, bin_address, _p_path_bin);
+            
+            // printf("bin_cnt = %d, bin_index = %d, bin_address = 0x%04X, path_bin = %s \n",
+            //     bin_cnt, bin_index, p_bin_addr_array[bin_index], *p_bin_path_array[bin_index]);
         }
-        exit(EXIT_SUCCESS);
+        // exit(EXIT_SUCCESS);
     }
 }
 
@@ -259,6 +266,7 @@ int main(int argc, char *argv[])
         esp_loader_reset_target();
         loader_port_deinit();
 
+        exit(EXIT_SUCCESS); // exit program when done. Below code is to open UART monitor
 
         int serial = serialOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE);
         if (serial < 0) {
