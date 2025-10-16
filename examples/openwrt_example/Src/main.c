@@ -42,8 +42,6 @@ const loader_linux_config_t config = {
 };
 
 static uint32_t _higher_baud_rate = HIGHER_BAUD_RATE;
-static int _have_boot = 0, _have_part = 0, _have_app = 0, _have_ota = 0;
-static const char *_p_path_boot = NULL, *_p_path_part = NULL, *_p_path_app = NULL, *_p_path_ota = NULL;
 
 typedef struct {
     size_t address;
@@ -66,40 +64,12 @@ static const char *get_target_string(target_chip_t target)
     return target_to_string_mapping[target];
 }
 
-// For esp32, esp32s2
-#define BOOTLOADER_ADDRESS_V0       0x1000
-// For esp8266, esp32s3 and later chips
-#define BOOTLOADER_ADDRESS_V1       0x0
-// For esp32c5 and esp32p4
-#define BOOTLOADER_ADDRESS_V2       0x2000
-#define PARTITION_ADDRESS           0x8000
-#define OTA_DATA_ADDRESS            0xd000
-#define APPLICATION_ADDRESS         0x10000
-static int get_target_bootloader_address(target_chip_t target, size_t *bootloader_address)
-{
-    if (target >= ESP_MAX_CHIP) {
-        return -1;
-    }
-    if (target == ESP32_CHIP || target == ESP32S2_CHIP){
-        *bootloader_address = BOOTLOADER_ADDRESS_V0;
-    } else if (target == ESP32C5_CHIP || target == ESP32P4_CHIP){
-        *bootloader_address = BOOTLOADER_ADDRESS_V2;
-    } else {
-        *bootloader_address = BOOTLOADER_ADDRESS_V1;
-    }
-    return 0;
-}
-
 static const struct option longopts[] = {
     {"help", no_argument, NULL, 'h'},
     {"version", no_argument, NULL, 'V'},
     // ----------
-    {"baudrate", required_argument, NULL, 'r'},
+    {"baudrate", required_argument, NULL, 'b'},
     {"reboot", no_argument, NULL, 'R'},
-    {"bootloader", required_argument, NULL, 'b'},
-    {"partition", required_argument, NULL, 'p'},
-    {"application", required_argument, NULL, 'a'},
-    {"ota", required_argument, NULL, 'o'},
     // ----------
     {NULL, 0, NULL, 0}};
 
@@ -110,25 +80,13 @@ static void print_help(const char *progname) {
     printf("  -h, --help              display this help\n");
     printf("  -V, --version           display version information\n");
     // ----------
-    printf("  -B, --baudrate=VALUE    use VALUE as the UART baudrate\n");
+    printf("  -b, --baudrate=VALUE    use VALUE as the UART baudrate\n");
     printf("  -R, --reboot            reboot target\n");
-    printf("  -b, --bootloader=PATH   use PATH as the path of bin\n");
-    printf("  -p, --partition=PATH    use PATH as the path of bin\n");
-    printf("  -a, --application=PATH  use PATH as the path of bin\n");
-    printf("  -o, --ota=PATH          use PATH as the path of bin\n");
 }
 
 static void print_args(void)
 {
     printf(" baudrate = %d\n", _higher_baud_rate);
-    if(_have_boot){
-        printf(" bootloader = %s\n", _p_path_boot);}
-    if(_have_part){
-        printf(" partition = %s\n", _p_path_part);}
-    if(_have_app){
-        printf(" application = %s\n", _p_path_app);}
-    if(_have_ota){
-        printf(" ota = %s\n", _p_path_ota);}
 }
 
 static void print_version() {
@@ -149,7 +107,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRB:b:p:a:o:", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRb:", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -165,28 +123,8 @@ static void args_handler(int argc, char *argv[])
                 reboot_target();
                 exit(EXIT_SUCCESS);
                 break;
-            case 'B':
-                _higher_baud_rate = atoi(optarg);
-                break;
             case 'b':
-                // bootloader
-                _have_boot = 1;
-                _p_path_boot = optarg;
-                break;
-            case 'p':
-                // partition table
-                _have_part = 1;
-                _p_path_part = optarg;
-                break;
-            case 'a':
-                // application
-                _have_app = 1;
-                _p_path_app = optarg;
-                break;
-            case 'o':
-                // ota
-                _have_ota = 1;
-                _p_path_ota = optarg;
+                _higher_baud_rate = atoi(optarg);
                 break;
             default:
                 lose = 1;
@@ -197,10 +135,10 @@ static void args_handler(int argc, char *argv[])
 
     // try to use extra args to parse for flasher address and binary file
     int extra_opts_cnt = argc - optind;
-    printf("extra_opts_cnt = %d\n",extra_opts_cnt);
+    // printf("extra_opts_cnt = %d\n",extra_opts_cnt);
     if (lose || extra_opts_cnt % 2) {
         /* Print error message and exit.  */
-        printf("optind = %d, argc = %d \n", optind, argc);
+        // printf("optind = %d, argc = %d \n", optind, argc);
         if (optind < argc){
             for(int i = optind; i < argc; i++){
                 fprintf(stderr, "%s: extra operand: %s\n", program_name,
@@ -221,7 +159,7 @@ static void args_handler(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
         
-        printf("optind = %d, argc = %d \n", optind, argc);
+        // printf("optind = %d, argc = %d \n", optind, argc);
         for(int i = optind; i < argc; i += 2) {
             int bin_index = (i - optind) / 2;
             // Validate address format using strtoul for hexadecimal parsing
@@ -251,7 +189,7 @@ int main(int argc, char *argv[])
     args_handler(argc, argv);
 
     // Check if args have any bin location provided
-    if((_have_boot || _have_part || _have_app || _have_ota || flash_item_count > 0) == 0){
+    if(flash_item_count == 0){
         printf("No bin file input, exit...\n");
         exit(EXIT_SUCCESS);
     }
@@ -261,27 +199,8 @@ int main(int argc, char *argv[])
 
     if (connect_to_target(_higher_baud_rate) == ESP_LOADER_SUCCESS) {
         target_chip_t target_chip;
-        size_t flash_address;
         target_chip = esp_loader_get_target();        
         printf("Target chip: %s\n", get_target_string(target_chip));
-
-        if(_have_boot){
-            printf("Loading bootloader...\n");
-            get_target_bootloader_address(target_chip, &flash_address);
-            read_bin_and_flash(_p_path_boot, flash_address);
-        }
-        if(_have_part){
-            printf("Loading partition table...\n");
-            read_bin_and_flash(_p_path_part, PARTITION_ADDRESS);
-        }
-        if(_have_app){
-            printf("Loading app...\n");
-            read_bin_and_flash(_p_path_app, APPLICATION_ADDRESS);
-        }
-        if(_have_ota){
-            printf("Loading ota...\n");
-            read_bin_and_flash(_p_path_ota, OTA_DATA_ADDRESS);
-        }
         
         // Flash additional address-file pairs
         for (int i = 0; i < flash_item_count; i++) {
