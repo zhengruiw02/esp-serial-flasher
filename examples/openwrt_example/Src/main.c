@@ -45,6 +45,14 @@ static uint32_t _higher_baud_rate = HIGHER_BAUD_RATE;
 static int _have_boot = 0, _have_part = 0, _have_app = 0, _have_ota = 0;
 static const char *_p_path_boot = NULL, *_p_path_part = NULL, *_p_path_app = NULL, *_p_path_ota = NULL;
 
+typedef struct {
+    size_t address;
+    const char* filepath;
+} flash_item_t;
+
+static flash_item_t* flash_items = NULL;
+static int flash_item_count = 0;
+
 static const char *get_target_string(target_chip_t target)
 {
     if (target >= ESP_MAX_CHIP) {
@@ -203,23 +211,36 @@ static void args_handler(int argc, char *argv[])
                 program_name);
         exit(EXIT_FAILURE);
     }else{
-        // should be normal
-        int bin_cnt = extra_opts_cnt / 2;
-        int bin_index, bin_address;
-        static const char *_p_path_bin = NULL;
-        // unsigned int *p_bin_addr_array = malloc(sizeof(int) * bin_cnt);
-        // char **p_bin_path_array = malloc(sizeof(char *) * bin_cnt);
+        // Process address-file pairs from command line
+        flash_item_count = extra_opts_cnt / 2;
+        flash_items = malloc(sizeof(flash_item_t) * flash_item_count);
+        
+        // Check memory allocation result
+        if (flash_items == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
+        
         printf("optind = %d, argc = %d \n", optind, argc);
-        for(int i = optind; i < argc; i=i+2 ){
-            bin_index = (i - optind) / 2;            
-            sscanf(argv[i], "%x", &bin_address);
-            _p_path_bin = argv[i+1];
-            // sscanf(argv[i], "%x", p_bin_addr_array[bin_index]);
-            // *p_bin_path_array[bin_index] = argv[i+1];
-            printf("bin_cnt = %d, bin_index = %d, bin_address = 0x%04X, path_bin = %s \n", bin_cnt, bin_index, bin_address, _p_path_bin);
+        for(int i = optind; i < argc; i += 2) {
+            int bin_index = (i - optind) / 2;
+            // Validate address format using strtoul for hexadecimal parsing
+            char* endptr;
+            flash_items[bin_index].address = strtoul(argv[i], &endptr, 16);
             
-            // printf("bin_cnt = %d, bin_index = %d, bin_address = 0x%04X, path_bin = %s \n",
-            //     bin_cnt, bin_index, p_bin_addr_array[bin_index], *p_bin_path_array[bin_index]);
+            // Check if address parsing was successful
+            if (*endptr != '\0') {
+                fprintf(stderr, "Invalid address format: %s\n", argv[i]);
+                free(flash_items);
+                exit(EXIT_FAILURE);
+            }
+            
+            // Store the file path
+            flash_items[bin_index].filepath = argv[i+1];
+            
+            // Print parsed information for debugging
+            printf("bin_index = %d, bin_address = 0x%08X, path_bin = %s \n", 
+                bin_index, (unsigned int)flash_items[bin_index].address, flash_items[bin_index].filepath);
         }
         // exit(EXIT_SUCCESS);
     }
@@ -227,11 +248,10 @@ static void args_handler(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-
     args_handler(argc, argv);
 
     // Check if args have any bin location provided
-    if((_have_boot || _have_part || _have_app || _have_ota) == 0){
+    if((_have_boot || _have_part || _have_app || _have_ota || flash_item_count > 0) == 0){
         printf("No bin file input, exit...\n");
         exit(EXIT_SUCCESS);
     }
@@ -262,9 +282,21 @@ int main(int argc, char *argv[])
             printf("Loading ota...\n");
             read_bin_and_flash(_p_path_ota, OTA_DATA_ADDRESS);
         }
+        
+        // Flash additional address-file pairs
+        for (int i = 0; i < flash_item_count; i++) {
+            printf("Loading custom binary to address 0x%08X...\n", (unsigned int)flash_items[i].address);
+            read_bin_and_flash(flash_items[i].filepath, flash_items[i].address);
+        }
+            
         printf("Done!\n");
         esp_loader_reset_target();
         loader_port_deinit();
+
+        // Free memory allocated for flash items
+        if (flash_items) {
+            free(flash_items);
+        }
 
         exit(EXIT_SUCCESS); // exit program when done. Below code is to open UART monitor
 
@@ -288,5 +320,9 @@ int main(int argc, char *argv[])
             usleep(100);
         }
     }
-
+    
+    // Free memory even if connection to target failed
+    if (flash_items) {
+        free(flash_items);
+    }
 }
