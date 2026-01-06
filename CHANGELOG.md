@@ -20,6 +20,40 @@
 </div>
 <hr>
 
+## v1.11.0 (2025-12-05)
+
+### ✨ New Features
+
+- Add SDIO support for ESP32-C5 as a target *(Jaroslav Burian - 4591799)*
+- Add support for 1-bit SDIO *(Jaroslav Burian - 4d54095)*
+
+### 🐛 Bug Fixes
+
+- Correct flash boundary check for read/verify operations *(RevK - bdf7b62)*
+
+
+## v1.10.0 (2025-09-25)
+
+### ✨ New Features
+
+- Add support for communication via CP210x and CH34x serial converters *(Jaroslav Burian - 8c67fdc)*
+- Add support for USB CDC ACM for ESP32-P4 as a host *(Jaroslav Burian - e6e5282)*
+
+### 🐛 Bug Fixes
+
+- **esp32c2**: Fix transmission rate change for ESP32-C2 with 26 MHz crystal *(Jaroslav Burian - bb5bc52)*
+- **esp32c2**: Add missing magic value of new ECO4 *(Jaroslav Burian - 468221a)*
+
+### 📖 Documentation
+
+- Better unify example README files and remove explicit references to ESP32 as a target *(Jaroslav Burian - a70404c)*
+- Create new strucured documentation with separated files for each topic *(Jaroslav Burian - 86e49eb)*
+
+### 🔧 Code Refactoring
+
+- Update driver dependency *(Chen Chen - 610873b)*
+
+
 ## v1.9.0 (2025-07-21)
 
 ### ✨ New Features

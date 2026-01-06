@@ -20,8 +20,17 @@
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 
-#define ESPRESSIF_VID 0x303a
-#define ESP_SERIAL_JTAG_PID 0x1001
+// Embedded binary files using bin2array.cmake
+extern const uint8_t bootloader_bin[];
+extern const uint32_t bootloader_bin_size;
+extern const uint8_t bootloader_bin_md5[];
+extern const uint8_t partition_table_bin[];
+extern const uint32_t partition_table_bin_size;
+extern const uint8_t partition_table_bin_md5[];
+extern const uint8_t app_bin[];
+extern const uint32_t app_bin_size;
+extern const uint8_t app_bin_md5[];
+
 
 static const char *TAG = "usb_flasher";
 static SemaphoreHandle_t device_disconnected_sem;
@@ -81,8 +90,8 @@ void app_main(void)
 
     while (true) {
         const loader_esp32_usb_cdc_acm_config_t config = {
-            .device_vid = ESPRESSIF_VID,
-            .device_pid = ESP_SERIAL_JTAG_PID,
+            .device_vid = USB_VID_PID_AUTO_DETECT,
+            .device_pid = USB_VID_PID_AUTO_DETECT,
             .connection_timeout_ms = 1000,
             .out_buffer_size = 4096,
             .device_disconnected_callback = device_disconnected_callback,
@@ -99,15 +108,15 @@ void app_main(void)
         /* The ESP32-S3 ignores the line coding set commands,
            so we don't set the higher baudrate argument */
         if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
-            example_binaries_t bin;
-            get_example_binaries(esp_loader_get_target(), &bin);
 
             ESP_LOGI(TAG, "Loading bootloader...");
-            flash_binary(bin.boot.data, bin.boot.size, bin.boot.addr);
+            target_chip_t chip = esp_loader_get_target();
+            uint32_t bootloader_addr = get_bootloader_address(chip);
+            flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
             ESP_LOGI(TAG, "Loading partition table...");
-            flash_binary(bin.part.data, bin.part.size, bin.part.addr);
+            flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
             ESP_LOGI(TAG, "Loading app...");
-            flash_binary(bin.app.data, bin.app.size, bin.app.addr);
+            flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
             ESP_LOGI(TAG, "Done!");
         }
 

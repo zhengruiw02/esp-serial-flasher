@@ -17,7 +17,7 @@ The following steps are performed in order to load the program into target's RAM
 ## Hardware Required
 
 - **Host**: Espressif SoC development board with SDIO Host support
-- **Target**: Espressif SoC development board with SDIO download support (e.g., ESP32-C6)
+- **Target**: Espressif SoC development board with SDIO download support (e.g., ESP32-C6, ESP32-C5)
 - One or two USB cables for power supply and programming.
 - Jumper cables for host-to-target connections.
 - **Pullup resistors**: 10kΩ to 47kΩ resistors for SDIO signal lines (may be required - see connection details below).
@@ -48,6 +48,14 @@ You can find the target SDIO pins for each target [here](https://docs.espressif.
 
 > [!NOTE]
 > SDIO pins CMD and DAT0-3 may require pullup resistors depending on your hardware setup. Please take a look at the [SD Pull-up Requirements](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) for more info.
+
+## Prepare Target Firmware
+
+Place the required target firmware binary in the `target-firmware/` directory. You can use your own binary or build it from the example source as shown below.
+
+**Required binary:**
+
+- `app.bin` - RAM executable binary
 
 ## Build and Flash
 

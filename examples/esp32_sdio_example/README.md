@@ -14,8 +14,8 @@ The following steps are performed in order to re-program the targets memory:
 
 ## Hardware Required
 
-- **Host**: ESP32-P4 development board (with SDIO support)
-- **Target**: ESP32-C6 development board (with SDIO download support)
+- **Host**: Espressif SoC development board with SDIO Host support
+- **Target**: Espressif SoC development board with SDIO download support (e.g., ESP32-C6, ESP32-C5)
 - One or two USB cables for power supply and programming.
 - Jumper cables for host-to-target connections.
 - **Pullup resistors**: 10kΩ to 47kΩ resistors for SDIO signal lines (may be required - see connection details below).
@@ -46,6 +46,16 @@ You can find target SDIO pin mappings [here](https://docs.espressif.com/projects
 
 > [!NOTE]
 > SDIO pins CMD and DAT0-3 may require pullup resistors depending on your hardware setup. Please take a look at the [SD Pull-up Requirements](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) for more info.
+
+## Prepare Target Firmware
+
+Place the required target firmware binaries in the `target-firmware/` directory. You can use your own binaries, build them from the esp-idf examples, or build them from the source in the `test/target-example-src` directory.
+
+**Required binaries:**
+
+- `bootloader.bin` - ESP bootloader binary
+- `partition-table.bin` - Partition table configuration
+- `app.bin` - Main application binary
 
 ## Build and Flash
 
