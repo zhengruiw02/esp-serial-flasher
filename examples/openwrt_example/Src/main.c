@@ -22,8 +22,8 @@
 #include "read_bin.h"
 
 #define GPIO_BASE_KERNEL    (512)   // for Linux kernel > 6.6, need add 512 in GPIO
-#define GPIO_NUM_RST        (1)
-#define GPIO_NUM_IO0        (3)
+#define GPIO_NUM_RST        (14)     // GPIO14, high to reset
+#define GPIO_NUM_IO0        (3)     // GPIO3, low to enter download mode
 
 #define TARGET_RST_Pin (GPIO_NUM_RST + GPIO_BASE_KERNEL)
 #define TARGET_IO0_Pin (GPIO_NUM_IO0 + GPIO_BASE_KERNEL)
@@ -34,14 +34,15 @@
 
 #define VERSION "1.0"
 
+static uint32_t _higher_baud_rate = HIGHER_BAUD_RATE;
+static char _serial_device[50] = SERIAL_DEVICE;
+
 const loader_linux_config_t config = {
-    .device = SERIAL_DEVICE,
+    .device = _serial_device,
     .baudrate = DEFAULT_BAUD_RATE,
     .reset_trigger_pin = TARGET_RST_Pin,
     .gpio0_trigger_pin = TARGET_IO0_Pin,
 };
-
-static uint32_t _higher_baud_rate = HIGHER_BAUD_RATE;
 
 typedef struct {
     size_t address;
@@ -69,6 +70,7 @@ static const struct option longopts[] = {
     {"version", no_argument, NULL, 'V'},
     // ----------
     {"baudrate", required_argument, NULL, 'b'},
+    {"port", required_argument, NULL, 'p'},
     {"reboot", no_argument, NULL, 'R'},
     // ----------
     {NULL, 0, NULL, 0}};
@@ -81,12 +83,13 @@ static void print_help(const char *progname) {
     printf("  -V, --version           display version information\n");
     // ----------
     printf("  -b, --baudrate=VALUE    use VALUE as the UART baudrate\n");
+    printf("  -p, --port=VALUE        use VALUE as the UART port\n");
     printf("  -R, --reboot            reboot target\n");
 }
 
 static void print_args(void)
 {
-    printf(" baudrate = %d\n", _higher_baud_rate);
+    printf(" baudrate = %d\n serial port = %s\n", _higher_baud_rate, _serial_device);
 }
 
 static void print_version() {
@@ -107,7 +110,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRb:", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRb:p:", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -125,6 +128,9 @@ static void args_handler(int argc, char *argv[])
                 break;
             case 'b':
                 _higher_baud_rate = atoi(optarg);
+                break;
+            case 'p':
+                memcpy(_serial_device, optarg, strlen(optarg));
                 break;
             default:
                 lose = 1;
