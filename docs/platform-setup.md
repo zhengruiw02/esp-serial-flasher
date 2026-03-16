@@ -2,6 +2,10 @@
 
 This document provides setup instructions for using ESP Serial Flasher on different host platforms to program and interact with ESP devices.
 
+## Platform SDK Compatibility
+
+Each port is a reference implementation tied to a specific platform SDK. The tested SDK versions are noted in each platform section below. Ports are not part of the library's [semantic versioning](https://semver.org/) guarantee. Ports are maintained on a best-effort basis — breaking changes to them are minimized, but are sometimes necessary to stay up to date with upstream platform SDKs. When such an update is needed, it is released as a minor or patch version of this library.
+
 ## General Prerequisites
 
 Before setting up any platform, ensure you have the following:
@@ -11,11 +15,11 @@ Before setting up any platform, ensure you have the following:
 
 ## ESP-IDF Support
 
-**Testing Status**: Regularly tested with all major and minor versions of ESP-IDF from v4.3 to v5.5
+**Testing Status**: Regularly tested with all major and minor versions of ESP-IDF from v5.5 onwards
 
 ### Prerequisites
 
-- **[ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v4.3+** - ESP-IDF development framework
+- **[ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v5.5+** - ESP-IDF development framework
 
 ### Setup
 

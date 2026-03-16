@@ -58,6 +58,12 @@ This library enables you to program Espressif SoCs from various host platforms u
 - Public headers: [include/esp_loader.h](include/esp_loader.h) and [include/esp_loader_io.h](include/esp_loader_io.h) define the stable public API of this library.
 - Examples and helpers: [examples/common/](examples/common/) contains helper utilities used by the examples; not part of the library API, but can be used as a reference.
 
+### Versioning and Compatibility
+
+This library follows [Semantic Versioning](https://semver.org/). The public API defined in `include/` folder maintains backward compatibility within the same major version — no breaking changes are introduced in minor or patch releases.
+
+Port implementations (under `port/`) are reference implementations that depend on the SDK of the target platform. They are tested against the specific SDK versions listed in the [Platform Setup Guide](docs/platform-setup.md) and do not carry their own semver guarantee. Ports are maintained on a best-effort basis — breaking changes to them are minimized, but are sometimes necessary to stay up to date with upstream platform SDKs. When such an update is needed, it is released as a minor or patch version of this library.
+
 ## Getting Started
 
 ### Prerequisites
@@ -71,7 +77,7 @@ To use ESP Serial Flasher, you need:
 
 Different host platforms require specific setup procedures:
 
-- **[ESP32 series](docs/platform-setup.md#esp-idf-support)**: Works with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v4.3 or later
+- **[ESP32 series](docs/platform-setup.md#esp-idf-support)**: Works with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v5.5 or later
 - **[STM32](docs/platform-setup.md#stm32-setup)**: Requires [STM32 HAL libraries](https://www.st.com/en/embedded-software/stm32cube-mcu-mpu-packages.html) and [ARM toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
 - **[Zephyr](docs/platform-setup.md#zephyr-setup)**: Integrates as [Zephyr](https://zephyrproject.org/) module with specific Kconfig options
 - **[Raspberry Pi Pico](docs/platform-setup.md#raspberry-pi-pico-setup)**: Uses [Pico SDK](https://github.com/raspberrypi/pico-sdk)
