@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
 
-# add_definitions(-DSERIAL_FLASHER_RESET_INVERT=1)
 
 set(OPENWRT_DIR "/home/henry/workspace/openwrt-linkit-6.12")
 set(OPENWRT_TOOLCHAIN_VER "toolchain-mipsel_24kc_gcc-14.3.0_musl")
@@ -15,6 +14,8 @@ set(PORT LINUX)
 project(esp_flasher)
 
 add_compile_definitions(SERIAL_FLASHER_INTERFACE_UART)
+
+add_definitions(-DSERIAL_FLASHER_RESET_INVERT=1)
 
 add_definitions(-DSINGLE_TARGET_SUPPORT)
 # include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)

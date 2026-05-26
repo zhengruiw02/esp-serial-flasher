@@ -74,6 +74,7 @@ static const struct option longopts[] = {
     {"port", required_argument, NULL, 'p'},
     {"reboot", no_argument, NULL, 'R'},
     {"ram", no_argument, NULL, 'r'},
+    {"debug", no_argument, NULL, 'd'},
     // ----------
     {NULL, 0, NULL, 0}};
 
@@ -88,6 +89,7 @@ static void print_help(const char *progname) {
     printf("  -p, --port=VALUE        use VALUE as the UART port\n");
     printf("  -R, --reboot            reboot target\n");
     printf("  -r, --ram               load binary to RAM\n");
+    printf("  -d, --debug             enable debug trace\n");
 }
 
 static void print_args(void)
@@ -113,7 +115,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRb:p:r", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRb:p:rd", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -131,6 +133,9 @@ static void args_handler(int argc, char *argv[])
                 break;
             case 'r':
                 ram_mode = 1;
+                break;
+            case 'd':
+                loader_port_set_debug(true);
                 break;
             case 'b':
                 _higher_baud_rate = atoi(optarg);
@@ -224,7 +229,7 @@ int main(int argc, char *argv[])
     }
 
     // Init GPIO and serial port to target
-    loader_port_linux_init(&config);    
+    loader_port_linux_init(&config);
 
     if (connect_to_target(_higher_baud_rate) == ESP_LOADER_SUCCESS) {
         target_chip_t target_chip;

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "esp_loader_io.h"
 
 #ifdef __cplusplus
@@ -31,6 +32,7 @@ typedef struct {
 
 esp_loader_error_t loader_port_linux_init(const loader_linux_config_t *config);
 void loader_port_deinit(void);
+void loader_port_set_debug(bool enable);
 int serialOpen (const char *device, uint32_t baudrate);
 
 #ifdef __cplusplus

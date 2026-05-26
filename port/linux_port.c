@@ -26,13 +26,13 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 
-#if SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 {
     static bool write_prev = false;
@@ -46,12 +46,22 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
         printf("%02x ", data[i]);
     }
 }
-#endif
 
 static int serial;
 static int64_t s_time_end;
 static int32_t s_reset_trigger_pin;
 static int32_t s_gpio0_trigger_pin;
+static bool s_debug_mode = false;
+
+static bool check_if_run_debug_mode(void)
+{
+    return s_debug_mode;
+}
+
+void loader_port_set_debug(bool enable)
+{
+    s_debug_mode = enable;
+}
 
 static void gpio_export(int pin) {
     char path[64];
@@ -273,14 +283,10 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
     if (written < 0) {
         return ESP_LOADER_ERROR_FAIL;
     } else if (written < size) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, written, true);
-#endif
+        if (check_if_run_debug_mode()) transfer_debug_print(data, written, true);
         return ESP_LOADER_ERROR_TIMEOUT;
     } else {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, written, true);
-#endif
+        if (check_if_run_debug_mode()) transfer_debug_print(data, written, true);
         return ESP_LOADER_SUCCESS;
     }
 }
@@ -291,9 +297,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
     (void) timeout;
     RETURN_ON_ERROR( read_data(data, size) );
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, size, false);
-#endif
+    if (check_if_run_debug_mode()) transfer_debug_print(data, size, false);
 
     return ESP_LOADER_SUCCESS;
 }

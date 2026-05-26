@@ -227,6 +227,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     uint32_t *cur_seg_pos;
     // ESP8266 does not have extended header
     uint32_t offset = esp_loader_get_target() == ESP8266_CHIP ? BIN_HEADER_SIZE : BIN_HEADER_EXT_SIZE;
+    printf("Header offset: 0x%X\n", offset);
     for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[offset]);
             seg < header->segments;
             seg++) {
