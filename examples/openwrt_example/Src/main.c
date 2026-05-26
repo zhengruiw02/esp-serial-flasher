@@ -17,6 +17,15 @@
 #include <stdlib.h>     // included for `EXIT_SUCCESS|EXIT_FAILURE`
 
 #include <sys/param.h>
+
+#define ENABLE_INTERACTIVE_MONITOR   1  /* uncomment to enable interactive terminal after RAM load */
+
+#ifdef ENABLE_INTERACTIVE_MONITOR
+#include <poll.h>
+#include <termios.h>
+#include <fcntl.h>
+#endif
+
 #include "linux_port.h"
 #include "example_common.h"
 #include "read_bin.h"
@@ -277,6 +286,50 @@ int main(int argc, char *argv[])
             printf("********************************************\n");
 
             usleep(500000);
+
+#ifdef ENABLE_INTERACTIVE_MONITOR
+            struct termios old_stdin, new_stdin;
+            tcgetattr(STDIN_FILENO, &old_stdin);
+            new_stdin = old_stdin;
+            cfmakeraw(&new_stdin);
+            new_stdin.c_lflag |= ISIG;
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &new_stdin);
+
+            struct pollfd fds[2];
+            fds[0].fd = STDIN_FILENO;
+            fds[0].events = POLLIN;
+            fds[1].fd = serial;
+            fds[1].events = POLLIN;
+
+            while (1) {
+                int ret = poll(fds, 2, -1);
+                if (ret < 0) break;
+
+                if (fds[0].revents & POLLIN) {
+                    char buf[256];
+                    ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
+                    if (n > 0) {
+                        for (ssize_t i = 0; i < n; i++) {
+                            if (buf[i] == '\r') {
+                                write(serial, "\r\n", 2);
+                            } else {
+                                write(serial, &buf[i], 1);
+                            }
+                        }
+                    }
+                }
+                if (fds[1].revents & POLLIN) {
+                    char buf[256];
+                    ssize_t n = read(serial, buf, sizeof(buf));
+                    if (n > 0) {
+                        write(STDOUT_FILENO, buf, n);
+                    }
+                }
+            }
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &old_stdin);
+#else
             while (1) {
                 char ch;
                 int byte = read(serial, &ch, 1);
@@ -285,6 +338,7 @@ int main(int argc, char *argv[])
                 }
                 usleep(100);
             }
+#endif
         }
     }
     
