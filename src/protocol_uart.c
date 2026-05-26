@@ -101,6 +101,10 @@ esp_loader_error_t send_cmd(const send_cmd_config *config)
 
     RETURN_ON_ERROR(SLIP_send_delimiter());
 
+    if (config->skip_response) {
+        return ESP_LOADER_SUCCESS;
+    }
+
     command_t command = ((const command_common_t *)config->cmd)->command;
     const uint8_t response_cnt = command == SYNC ? 8 : 1;
 

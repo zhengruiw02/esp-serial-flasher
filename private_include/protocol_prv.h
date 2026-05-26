@@ -33,6 +33,7 @@ typedef struct {
                                       case resp_data_size is the maximum response data size allowed.
                                       Set to NULL to require fixed response size of resp_data_size. */
     uint32_t *reg_value; // Out parameter for the READ_REG command, will return zero otherwise
+    bool skip_response; // If true, send command but don't wait for response (e.g. MEM_END with execute)
 } send_cmd_config;
 
 void log_loader_internal_error(error_code_t error);

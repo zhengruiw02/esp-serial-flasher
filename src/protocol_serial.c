@@ -470,6 +470,7 @@ esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
     const send_cmd_config cmd_config = {
         .cmd = &end_cmd,
         .cmd_size = sizeof(end_cmd),
+        .skip_response = (entrypoint != 0),
     };
 
     return send_cmd(&cmd_config);
