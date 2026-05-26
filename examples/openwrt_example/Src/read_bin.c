@@ -144,3 +144,46 @@ int read_bin_and_flash(const char *filename, size_t flash_address)
 
     return 0;
 }
+
+int read_bin_and_flash_to_ram(const char *filename)
+{
+    char *buffer = NULL;
+    size_t file_size = 0;
+    struct timespec start_time, end_time;
+    // Record start time
+    if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+        perror("clock_gettime start");
+        return -1;
+    }
+    
+    buffer = read_file_to_buffer(filename, &file_size);
+    if(buffer == NULL){
+        return -1;
+    }
+
+    // successfully read buffer from file
+
+    // print_file_content(buffer, file_size);
+    esp_loader_error_t err = load_ram_binary(buffer);
+    if (err != ESP_LOADER_SUCCESS) {
+        fprintf(stderr, "Loading to RAM failed with error: %d\n", err);
+        free_file_buffer(buffer);
+        return -1;
+    }
+
+    free_file_buffer(buffer);
+
+    // Record end time
+    if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+        perror("clock_gettime end");
+        return -1;
+    }
+
+    // Calculate elapsed time
+    double elapsed_time = (end_time.tv_sec - start_time.tv_sec) * 1000000000.0 +
+                         (end_time.tv_nsec - start_time.tv_nsec);
+    // Convert to different units for better readability
+    printf("Print time: %.3f seconds\n", elapsed_time / 1000000000.0);
+
+    return 0;
+}

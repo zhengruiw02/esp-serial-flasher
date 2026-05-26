@@ -51,6 +51,7 @@ typedef struct {
 
 static flash_item_t* flash_items = NULL;
 static int flash_item_count = 0;
+static int ram_mode = 0;
 
 static const char *get_target_string(target_chip_t target)
 {
@@ -72,6 +73,7 @@ static const struct option longopts[] = {
     {"baudrate", required_argument, NULL, 'b'},
     {"port", required_argument, NULL, 'p'},
     {"reboot", no_argument, NULL, 'R'},
+    {"ram", no_argument, NULL, 'r'},
     // ----------
     {NULL, 0, NULL, 0}};
 
@@ -85,6 +87,7 @@ static void print_help(const char *progname) {
     printf("  -b, --baudrate=VALUE    use VALUE as the UART baudrate\n");
     printf("  -p, --port=VALUE        use VALUE as the UART port\n");
     printf("  -R, --reboot            reboot target\n");
+    printf("  -r, --ram               load binary to RAM\n");
 }
 
 static void print_args(void)
@@ -99,7 +102,7 @@ static void print_version() {
 static void reboot_target(void)
 {
     printf("Reboot target...\n");
-    loader_port_linux_init(&config);                
+    loader_port_linux_init(&config);
     esp_loader_reset_target();
     loader_port_deinit();
 }
@@ -110,7 +113,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRb:p:", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRb:p:r", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -125,6 +128,9 @@ static void args_handler(int argc, char *argv[])
             case 'R':
                 reboot_target();
                 exit(EXIT_SUCCESS);
+                break;
+            case 'r':
+                ram_mode = 1;
                 break;
             case 'b':
                 _higher_baud_rate = atoi(optarg);
@@ -142,7 +148,24 @@ static void args_handler(int argc, char *argv[])
     // try to use extra args to parse for flasher address and binary file
     int extra_opts_cnt = argc - optind;
     // printf("extra_opts_cnt = %d\n",extra_opts_cnt);
-    if (lose || extra_opts_cnt % 2) {
+    if (ram_mode) {
+        if (extra_opts_cnt != 1) {
+            fprintf(stderr, "%s: RAM mode requires exactly one binary file\n", program_name);
+            fprintf(stderr, "Try `%s --help' for more information.\n", program_name);
+            exit(EXIT_FAILURE);
+        }
+        flash_item_count = 1;
+        flash_items = malloc(sizeof(flash_item_t) * flash_item_count);
+
+        if (flash_items == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
+
+        flash_items[0].filepath = argv[optind];
+        flash_items[0].address = 0;
+        printf("RAM mode: loading %s to RAM\n", flash_items[0].filepath);
+    } else if (lose || extra_opts_cnt % 2) {
         /* Print error message and exit.  */
         // printf("optind = %d, argc = %d \n", optind, argc);
         if (optind < argc){
@@ -210,39 +233,53 @@ int main(int argc, char *argv[])
         
         // Flash additional address-file pairs
         for (int i = 0; i < flash_item_count; i++) {
-            printf("Loading custom binary to address 0x%08X...\n", (unsigned int)flash_items[i].address);
-            read_bin_and_flash(flash_items[i].filepath, flash_items[i].address);
+            if (ram_mode) {
+                printf("Loading binary to RAM...\n");
+                read_bin_and_flash_to_ram(flash_items[i].filepath);
+            } else {
+                printf("Loading custom binary to address 0x%08X...\n", (unsigned int)flash_items[i].address);
+                read_bin_and_flash(flash_items[i].filepath, flash_items[i].address);
+            }
         }
             
         printf("Done!\n");
-        esp_loader_reset_target();
-        loader_port_deinit();
+        
+        if (!ram_mode) {
+            esp_loader_reset_target();
+            loader_port_deinit();
 
-        // Free memory allocated for flash items
-        if (flash_items) {
-            free(flash_items);
-        }
-
-        exit(EXIT_SUCCESS); // exit program when done. Below code is to open UART monitor
-
-        int serial = serialOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE);
-        if (serial < 0) {
-            printf("Serial port could not be opened!\n");
-        }
-
-        printf("********************************************\n");
-        printf("*** Logs below are print from slave .... ***\n");
-        printf("********************************************\n");
-
-        // Delay for skipping the boot message of the targets
-        usleep(500000);
-        while (1) {
-            char ch;
-            int byte = read(serial, &ch, 1);
-            if (byte == 1) {
-                printf("%c", ch);
+            if (flash_items) {
+                free(flash_items);
             }
-            usleep(100);
+
+            exit(EXIT_SUCCESS);
+        } else {
+            printf("RAM code is running. Opening UART monitor...\n");
+            loader_port_deinit();
+
+            if (flash_items) {
+                free(flash_items);
+            }
+
+            int serial = serialOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE);
+            if (serial < 0) {
+                printf("Serial port could not be opened!\n");
+                exit(EXIT_FAILURE);
+            }
+
+            printf("********************************************\n");
+            printf("*** Logs below are print from slave .... ***\n");
+            printf("********************************************\n");
+
+            usleep(500000);
+            while (1) {
+                char ch;
+                int byte = read(serial, &ch, 1);
+                if (byte == 1) {
+                    printf("%c", ch);
+                }
+                usleep(100);
+            }
         }
     }
     

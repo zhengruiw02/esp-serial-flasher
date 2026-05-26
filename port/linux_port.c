@@ -322,16 +322,22 @@ void loader_port_delay_ms(uint32_t ms)
     usleep(ms * 1000);
 }
 
+static int64_t time_now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000LL + (int64_t)ts.tv_nsec / 1000000LL;
+}
 
 void loader_port_start_timer(uint32_t ms)
 {
-    s_time_end = clock() + (ms * (CLOCKS_PER_SEC / 1000));
+    s_time_end = time_now_ms() + (int64_t)ms;
 }
 
 
 uint32_t loader_port_remaining_time(void)
 {
-    int64_t remaining = (s_time_end - clock()) / 1000;
+    int64_t remaining = s_time_end - time_now_ms();
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
