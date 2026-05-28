@@ -17,14 +17,9 @@
 #include <stdlib.h>     // included for `EXIT_SUCCESS|EXIT_FAILURE`
 
 #include <sys/param.h>
-
-#define ENABLE_INTERACTIVE_MONITOR   1  /* uncomment to enable interactive terminal after RAM load */
-
-#ifdef ENABLE_INTERACTIVE_MONITOR
 #include <poll.h>
 #include <termios.h>
 #include <fcntl.h>
-#endif
 
 #include "linux_port.h"
 #include "example_common.h"
@@ -61,6 +56,7 @@ typedef struct {
 static flash_item_t* flash_items = NULL;
 static int flash_item_count = 0;
 static int ram_mode = 0;
+static int interactive_mode = 0;
 
 static const char *get_target_string(target_chip_t target)
 {
@@ -84,6 +80,7 @@ static const struct option longopts[] = {
     {"reboot", no_argument, NULL, 'R'},
     {"ram", no_argument, NULL, 'r'},
     {"debug", no_argument, NULL, 'd'},
+    {"interactive", no_argument, NULL, 'i'},
     // ----------
     {NULL, 0, NULL, 0}};
 
@@ -98,6 +95,7 @@ static void print_help(const char *progname) {
     printf("  -p, --port=VALUE        use VALUE as the UART port\n");
     printf("  -R, --reboot            reboot target\n");
     printf("  -r, --ram               load binary to RAM\n");
+    printf("  -i, --interactive       open interactive terminal after RAM load\n");
     printf("  -d, --debug             enable debug trace\n");
 }
 
@@ -124,7 +122,7 @@ static void args_handler(int argc, char *argv[])
     const char *program_name = basename(argv[0]);
     int lose = 0;
 
-    while ((optc = getopt_long(argc, argv, "hVRb:p:rd", longopts, NULL)) != -1)
+    while ((optc = getopt_long(argc, argv, "hVRb:p:rdi", longopts, NULL)) != -1)
         switch (optc) {
             /* One goal here is having --help and --version exit immediately,
                per GNU coding standards.  */
@@ -142,6 +140,9 @@ static void args_handler(int argc, char *argv[])
                 break;
             case 'r':
                 ram_mode = 1;
+                break;
+            case 'i':
+                interactive_mode = 1;
                 break;
             case 'd':
                 loader_port_set_debug(true);
@@ -267,79 +268,74 @@ int main(int argc, char *argv[])
             }
 
             exit(EXIT_SUCCESS);
-        } else {
-            printf("RAM code is running. Opening UART monitor...\n");
-            loader_port_deinit();
+        }
 
-            if (flash_items) {
-                free(flash_items);
-            }
+        /* RAM mode — do NOT reset the chip */
+        loader_port_deinit();
 
-            int serial = serialOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE);
-            if (serial < 0) {
-                printf("Serial port could not be opened!\n");
-                exit(EXIT_FAILURE);
-            }
+        if (flash_items) {
+            free(flash_items);
+        }
 
-            printf("********************************************\n");
-            printf("*** Logs below are print from slave .... ***\n");
-            printf("********************************************\n");
+        if (!interactive_mode) {
+            exit(EXIT_SUCCESS);
+        }
 
-            usleep(500000);
+        printf("RAM code is running. Opening interactive terminal...\n");
 
-#ifdef ENABLE_INTERACTIVE_MONITOR
-            struct termios old_stdin, new_stdin;
-            tcgetattr(STDIN_FILENO, &old_stdin);
-            new_stdin = old_stdin;
-            cfmakeraw(&new_stdin);
-            new_stdin.c_lflag |= ISIG;
+        int serial = serialOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE);
+        if (serial < 0) {
+            printf("Serial port could not be opened!\n");
+            exit(EXIT_FAILURE);
+        }
 
-            tcsetattr(STDIN_FILENO, TCSANOW, &new_stdin);
+        printf("********************************************\n");
+        printf("*** Logs below are print from slave .... ***\n");
+        printf("********************************************\n");
 
-            struct pollfd fds[2];
-            fds[0].fd = STDIN_FILENO;
-            fds[0].events = POLLIN;
-            fds[1].fd = serial;
-            fds[1].events = POLLIN;
+        usleep(500000);
 
-            while (1) {
-                int ret = poll(fds, 2, -1);
-                if (ret < 0) break;
+        struct termios old_stdin, new_stdin;
+        tcgetattr(STDIN_FILENO, &old_stdin);
+        new_stdin = old_stdin;
+        cfmakeraw(&new_stdin);
+        new_stdin.c_lflag |= ISIG;
 
-                if (fds[0].revents & POLLIN) {
-                    char buf[256];
-                    ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
-                    if (n > 0) {
-                        for (ssize_t i = 0; i < n; i++) {
-                            if (buf[i] == '\r') {
-                                write(serial, "\r\n", 2);
-                            } else {
-                                write(serial, &buf[i], 1);
-                            }
+        tcsetattr(STDIN_FILENO, TCSANOW, &new_stdin);
+
+        struct pollfd fds[2];
+        fds[0].fd = STDIN_FILENO;
+        fds[0].events = POLLIN;
+        fds[1].fd = serial;
+        fds[1].events = POLLIN;
+
+        while (1) {
+            int ret = poll(fds, 2, -1);
+            if (ret < 0) break;
+
+            if (fds[0].revents & POLLIN) {
+                char buf[256];
+                ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
+                if (n > 0) {
+                    for (ssize_t i = 0; i < n; i++) {
+                        if (buf[i] == '\r') {
+                            write(serial, "\r\n", 2);
+                        } else {
+                            write(serial, &buf[i], 1);
                         }
                     }
                 }
-                if (fds[1].revents & POLLIN) {
-                    char buf[256];
-                    ssize_t n = read(serial, buf, sizeof(buf));
-                    if (n > 0) {
-                        write(STDOUT_FILENO, buf, n);
-                    }
+            }
+            if (fds[1].revents & POLLIN) {
+                char buf[256];
+                ssize_t n = read(serial, buf, sizeof(buf));
+                if (n > 0) {
+                    write(STDOUT_FILENO, buf, n);
                 }
             }
-
-            tcsetattr(STDIN_FILENO, TCSANOW, &old_stdin);
-#else
-            while (1) {
-                char ch;
-                int byte = read(serial, &ch, 1);
-                if (byte == 1) {
-                    printf("%c", ch);
-                }
-                usleep(100);
-            }
-#endif
         }
+
+        tcsetattr(STDIN_FILENO, TCSANOW, &old_stdin);
     }
     
     // Free memory even if connection to target failed
